@@ -1,0 +1,7 @@
+#lang racket
+
+(require csv-reading)
+
+(define (csvfile->list filename)
+  (call-with-input-file filename
+                        csv->list))
