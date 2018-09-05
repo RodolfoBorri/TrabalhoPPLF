@@ -2,10 +2,13 @@
 
 (require csv-reading)
 
+;;csvfile -> lista
+;;Recebe um arquivo no formato csv, o lê e transforma em lista
 (define (csvfile->list filename)
   (call-with-input-file filename
                         csv->list))
 
+;;Chamada da função de leitura
 (define empresas (csvfile->list "dados.csv"))
        
 (define (split_strings lista)
@@ -48,8 +51,17 @@
 (define (xy nome1 nome2) (MultColumnXYCorr nome1 nome2))
 (define (valorN nome) (calcNCorr nome))
 
+;;Lista, lista -> Numero
+;;Recebe duas listas com respectivos closes e retorna o valor de correlação entre os mesmos
 (define (Correlacao nome1 nome2)
   (/ (- (xy nome1 nome2) (/ (* (x nome1) (y nome2)) (valorN nome1))) (sqrt (* (- (xy nome1 nome1) (/ (* (x nome1) (x nome1)) (valorN nome1))) (- (xy nome2 nome2) (/ (* (y nome2) (y nome2)) (valorN nome1))))))) 
    
-  
+(define (media-movel-simples nome qnt_dias)
+  [cond [(> qnt_dias (length nome)) empty]
+        [(empty? nome) empty]
+        [else (cons(/ (auxMMS nome qnt_dias) qnt_dias) (media-movel-simples (rest nome) qnt_dias))]])
+
+(define (auxMMS lista num)
+  [cond [(zero? num) 0]
+        [else (+ (acoes-close (first lista)) (auxMMS (rest lista) (sub1 num)))]])
 
