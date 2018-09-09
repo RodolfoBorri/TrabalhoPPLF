@@ -12,23 +12,19 @@
 ;;Chamada da função de leitura
 (define empresas (csvfile->list "dados.csv"))
 
-;;Lista -> lista
-;;Recebe uma lista contendo uma única string e a divide em várias strings menores
-(define (split_strings lista)
-   [cond [(empty? lista) empty]
-   [else (cons(string-split (first(first lista))";" #:repeat? #t) (split_strings (rest lista)))]])
 
 ;;Estrutura das acoes
-(struct acoes (nome data open high low close adj volume) #:transparent)
-
-;;Chamada da função que divide uma string em várias
-(define formated (split_strings empresas))
+(struct acoes (nome data close) #:transparent)
 
 ;;Lista -> Lista
 ;;Transforma o tipo do close de string para número
 (define (construir lista)
-  (acoes (first lista) (second lista) (string->number (third lista)) (string->number (fourth lista)) (string->number (fifth lista)) (string->number (sixth lista))
-         (string->number (seventh lista)) (string->number (eighth lista))))
+  (acoes (first lista) (revert(second lista)) (string->number (sixth lista))))
+
+;;String -> String
+;;Recebe uma data e inverte ano com dia
+(define (revert date)
+  (string-join (reverse (string-split date "-")) "-"))
 
 ;;Lista, Nome de empresa -> Lista
 ;;Recebe o nome de uma empresa e filtra esse nome de 'Lista', o transformando em outra lista contendo apenas os elementos que tem esse nome
@@ -37,11 +33,11 @@
         [(equal? (first(first lista)) nome) (cons(construir (first lista)) (separa_acoes_nome (rest lista) nome))]
         [else (separa_acoes_nome (rest lista) nome)]])
 
-(define Google (separa_acoes_nome formated "Google"))
+(define Google (separa_acoes_nome empresas "Google"))
 
-(define Microsoft (separa_acoes_nome formated "Microsoft"))
+(define Microsoft (separa_acoes_nome empresas "Microsoft"))
 
-(define Petrobras (separa_acoes_nome formated "Petrobras"))
+(define Petrobras (separa_acoes_nome empresas "Petrobras"))
 
 ;;Lista -> Numero
 ;;Recebe uma lista de fechamentos(closes) e realiza o somatorio do primeiro até o ultimo elemento dessa lista
@@ -87,17 +83,49 @@
   [cond [(zero? num) 0]
         [else (+ (acoes-close (first lista)) (auxMMS (rest lista) (sub1 num)))]])
 
+;;Lista->Lista
+;;Recebe uma lista de empresa, e a ordena conforme a data
+(define (sorting lista)
+  (recursive_revert (sort (recursive_revert lista) #:key acoes-data string<?)))
+
+;;Lista->Lista
+;;Recebe uma lista e inverte o ano com o dia das datas dadas
+(define (recursive_revert lista)
+  [cond [(empty? lista) empty]
+        [else (cons (acoes (acoes-nome(first lista)) (revert(acoes-data(first lista))) (acoes-close (first lista))) (recursive_revert (rest lista)))]])
+
 ;;Data, Lista -> Data
 ;;Recebe uma lista (nome de empresa) e uma data, a função retorna a proxima data válida a partir da data recebida
 (define (proxDataValida data lista)
   [cond [(empty? lista) "Nao existe proxima data valida para a data inserida"]
-        [(> (date-month (string->date data "~d/~m/~Y")) (date-month(string->date (acoes-data (first lista)) "~d/~m/~Y"))) (proxDataValida data (rest lista))]
-        [(= (date-month (string->date data "~d/~m/~Y")) (date-month(string->date (acoes-data (first lista)) "~d/~m/~Y")))
+        [(> (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first lista)) "~d-~m-~Y"))) (proxDataValida data (rest lista))]
+        [(= (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first lista)) "~d-~m-~Y")))
         [cond
-          [(> (date-day (string->date data "~d/~m/~Y")) (date-day (string->date (acoes-data (first lista)) "~d/~m/~Y"))) (proxDataValida data (rest lista))]
-          [(< (date-day (string->date data "~d/~m/~Y")) (date-day (string->date (acoes-data (first lista)) "~d/~m/~Y"))) (acoes-data (first lista))]
+          [(> (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first lista)) "~d-~m-~Y"))) (proxDataValida data (rest lista))]
+          [(< (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first lista)) "~d-~m-~Y"))) (acoes-data (first lista))]
           [else (proxDataValida data (rest lista))]]]])
 
-         
+;;Data, lista -> Data
+;;Recebe uma data e uma lista e retorna a data válida antecendente a recebida
+(define (prevDataValida data lista)
+  [cond [(empty? lista) "Nao existe data anterior valida para a data inserida"]
+        [(> (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first (rest lista))) "~d-~m-~Y"))) (prevDataValida data (rest lista))]
+        [(= (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first (rest lista))) "~d-~m-~Y")))
+        [cond
+          [(> (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first (rest lista))) "~d-~m-~Y"))) (prevDataValida data (rest lista))]
+          [(<= (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first (rest lista))) "~d-~m-~Y"))) (acoes-data (first lista))]
+          [else (prevDataValida data (rest lista))]]]])
 
-;(string->date "11/05/2018" "~d/~m/~Y") 08/10/2018
+(define cont 1)
+
+
+;;o cont está sendo atualizado para 1 a cada iteração, olhar
+(define (media-movel-exponencial lista qnt_dias)
+  (define x (media-movel-simples lista qnt_dias))
+  (define multiplier (/ 2 (+ qnt_dias 1)))
+    [cond   [(> qnt_dias (length lista)) empty]
+            [(empty? lista) empty]
+            [(= cont 1) (cons (+ (* (- (acoes-close(first lista)) (first x)) multiplier) (first x)) (media-movel-exponencial (rest lista) qnt_dias))]])
+              
+                  
+ 
