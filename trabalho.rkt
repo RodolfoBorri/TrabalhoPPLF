@@ -28,7 +28,7 @@
   (string-join (reverse (string-split date "-")) "-"))
 
 ;;Lista, Nome de empresa -> Lista
-;;Recebe o nome de uma empresa e filtra esse nome de 'Lista', o transformando em outra lista contendo apenas os elementos que tem esse nome
+;;Recebe o nome de uma empresa e filtra esse nome de 'Lista', o transformando em outra lista contendo apenas os elementos que contém esse nome
 (define (separa_acoes_nome lista nome)
   [cond [(empty? lista) empty]
         [(equal? (first(first lista)) nome) (cons(construir (first lista)) (separa_acoes_nome (rest lista) nome))]
@@ -118,16 +118,19 @@
           [else (prevDataValida data (rest lista))]]]])
 
 ;;Lista, dias -> Lista
-;;
+;;Recebe uma lista e um periodo de dias, faz o calculo do MMS para ser usado na 1 iteração do MME, e em seguida chama a funcao de calculo do MME
 (define (exponencial lista dias)
   (define x (media-movel-simples lista dias))
   (cons (first x) (media-movel-exponencial (run_list lista dias) dias (first x))))
 
+;;Lista, dias -> Lista
+;;Recebe uma lista e um periodo de dias e avança esse periodo de dias na lista passada por parametro
 (define (run_list lista dias)
   [cond [(= dias 0) lista]
         [else (run_list (rest lista) (sub1 dias))]])
   
-
+;;Lista, dias, 1o valor do MMS ->Lista
+;;Recebe uma lista, um periodo de dias e o primeiro valor do MMS para aquele periodo, e realiza o calculo do MME para a quantidade de dias passada por parametro no periodo
 (define (media-movel-exponencial lista qnt_dias y)
    (define multiplier (/ 2 (+ qnt_dias 1)))
             [cond [(> qnt_dias (length lista)) empty]
@@ -135,3 +138,18 @@
                   [else
                       (define media-movel  (+ (* (- (acoes-close(first lista)) y) multiplier) y))
                       (cons media-movel (media-movel-exponencial (rest lista) qnt_dias media-movel))]])
+
+;;Lista, período, período
+;;Recebe uma lista e dois períodos, faz o calculo do MME para os mesmos e envia para a funcao de calculo do MACD
+(define (moving-average lista periodo1 periodo2)
+  (define per1 (exponencial lista periodo1))
+  (define per2 (exponencial lista periodo2))
+  (MACD lista per1 per2))
+
+;;Lista, periodo, período
+;;Recebe um nome de empresa e os intervalos de periodos para a realização da conta do MACD
+(define (MACD lista per1 per2)
+  [cond [(empty? per1) empty]
+        [(empty? per2) empty]
+        [else (cons (- (first per1) (first per2)) (MACD lista (rest per1) (rest per2)))]])
+        
