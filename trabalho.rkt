@@ -3,6 +3,7 @@
 (require csv-reading)
 (require srfi/19)
 
+
 ;;Função para poder ser realizada a leitura de arquivos .csv
 (define (csvfile->list filename)
   (call-with-input-file filename
@@ -116,16 +117,21 @@
           [(<= (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first (rest lista))) "~d-~m-~Y"))) (acoes-data (first lista))]
           [else (prevDataValida data (rest lista))]]]])
 
-(define cont 1)
+;;Lista, dias -> Lista
+;;
+(define (exponencial lista dias)
+  (define x (media-movel-simples lista dias))
+  (cons (first x) (media-movel-exponencial (run_list lista dias) dias (first x))))
 
+(define (run_list lista dias)
+  [cond [(= dias 0) lista]
+        [else (run_list (rest lista) (sub1 dias))]])
+  
 
-;;o cont está sendo atualizado para 1 a cada iteração, olhar
-(define (media-movel-exponencial lista qnt_dias)
-  (define x (media-movel-simples lista qnt_dias))
-  (define multiplier (/ 2 (+ qnt_dias 1)))
-    [cond   [(> qnt_dias (length lista)) empty]
-            [(empty? lista) empty]
-            [(= cont 1) (cons (+ (* (- (acoes-close(first lista)) (first x)) multiplier) (first x)) (media-movel-exponencial (rest lista) qnt_dias))]])
-              
-                  
- 
+(define (media-movel-exponencial lista qnt_dias y)
+   (define multiplier (/ 2 (+ qnt_dias 1)))
+            [cond [(> qnt_dias (length lista)) empty]
+                  [(empty? lista) empty]
+                  [else
+                      (define media-movel  (+ (* (- (acoes-close(first lista)) y) multiplier) y))
+                      (cons media-movel (media-movel-exponencial (rest lista) qnt_dias media-movel))]])
