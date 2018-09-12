@@ -2,7 +2,8 @@
 
 (require csv-reading)
 (require srfi/19)
-
+(require rackunit)
+(require rackunit/text-ui)
 
 ;;Função para poder ser realizada a leitura de arquivos .csv
 (define (csvfile->list filename)
@@ -153,3 +154,78 @@
         [(empty? per2) empty]
         [else (cons (- (first per1) (first per2)) (MACD lista (rest per1) (rest per2)))]])
         
+;;------------------------------------/
+;;Execução de testes                 /
+;;----------------------------------/
+
+(define (executa-testes . testes)
+  (run-tests (test-suite "Todos os testes" testes))(void))
+
+(define test-MME
+  (test-suite "testes MME"
+  (check-equal? (first(exponencial Google 14)) 1111.1821462857145)
+  (check-equal? (first(exponencial Petrobras 10)) 11.171000000000001)
+  (check-equal? (first(exponencial Microsoft 15)) 88.77999973333334)))
+
+(define test-MMS
+  (test-suite "testes MMS"
+  (check-equal? (first (media-movel-simples Google 10)) 1100.145996)
+  (check-equal? (first (media-movel-simples Microsoft 12)) 88.18249941666669)
+  (check-equal? (first (media-movel-simples Petrobras 15)) 11.494666666666665)))
+
+(define test-correl
+  (test-suite "Testes Correlacao"
+  (check-equal? (Correlacao Google Microsoft) 0.1603697511597682)
+  (check-equal? (Correlacao Google Petrobras) -0.07983751056172986)
+  (check-equal? (Correlacao Microsoft Petrobras) 0.6372067611546479)))
+
+(define test-next-date
+  (test-suite "Testes próxima data válida"
+  (check-equal? (proxDataValida "20-04-2018" Google) "23-04-2018")
+  (check-equal? (proxDataValida "10-03-2018" Google) "12-03-2018")
+  (check-equal? (proxDataValida "03-02-2018" Google) "05-02-2018")))
+
+(define test-prev-date
+  (test-suite "Testes data anterior válida"
+  (check-equal? (prevDataValida "30-05-2018" Google) "29-05-2018")
+  (check-equal? (prevDataValida "05-01-2018" Google) "04-01-2018")
+  (check-equal? (prevDataValida "26-02-2018" Google) "23-02-2018")))
+
+(define test-MACD
+  (test-suite "Testes MACD"
+  (check-equal? (first(moving-average Google 12 26)) -18.221595237179372)
+  (check-equal? (first(moving-average Petrobras 12 26)) -0.9373076923076944)
+  (check-equal? (first(moving-average Microsoft 12 26)) -2.069808198717922)))
+
+(executa-testes test-MME)
+(executa-testes test-MMS)
+(executa-testes test-correl)
+(executa-testes test-next-date)
+(executa-testes test-prev-date)
+(executa-testes test-MACD)
+
+
+;-------------------------------------/
+;Fim execução testes                 /
+;-----------------------------------/
+
+(struct compra_acoes (empresa qnt) #:transparent)
+
+(define (comprar-acao total_acoes lista carteira)
+  (- carteira (acoes-close (first lista))
+  [cond [(empty? total_acoes) (cons total_acoes (compra_acoes (acoes-nome (first lista)) (acoes-close (first lista))))]
+        [else (comprar-acao (rest total_acoes) lista carteira)]]))
+
+(define (vender-acao total_acoes lista carteira)
+  (+ carteira (acoes-close (first lista)))
+  [cond [(equal? (compra_acoes-empresa (first total_acoes)) (acoes-nome(first lista) (cons total_acoes (rest total_acoes))))]])
+  
+(define (listar_acoes lista)
+  [cond [(empty? lista) empty]
+        [else (cons lista (listar_acoes (compra_acoes (first lista) (second lista))))]])
+        
+(define compra_e_venda
+  (define carteira 10000)
+  (define total_acoes (cons empty))
+  
+  
