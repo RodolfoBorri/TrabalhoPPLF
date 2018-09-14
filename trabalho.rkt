@@ -5,6 +5,7 @@
 (require rackunit)
 (require rackunit/text-ui)
 
+
 ;;Função para poder ser realizada a leitura de arquivos .csv
 (define (csvfile->list filename)
   (call-with-input-file filename
@@ -197,35 +198,58 @@
   (check-equal? (first(moving-average Petrobras 12 26)) -0.9373076923076944)
   (check-equal? (first(moving-average Microsoft 12 26)) -2.069808198717922)))
 
-(executa-testes test-MME)
-(executa-testes test-MMS)
-(executa-testes test-correl)
-(executa-testes test-next-date)
-(executa-testes test-prev-date)
-(executa-testes test-MACD)
+;(executa-testes test-MME)
+;(executa-testes test-MMS)
+;(executa-testes test-correl)
+;(executa-testes test-next-date)
+;(executa-testes test-prev-date)
+;(executa-testes test-MACD)
 
 
 ;-------------------------------------/
 ;Fim execução testes                 /
 ;-----------------------------------/
 
-(struct compra_acoes (empresa qnt) #:transparent)
+(struct compra_acoes (empresa) #:transparent)
 
+
+;;funf
 (define (comprar-acao total_acoes lista carteira)
-  (- carteira (acoes-close (first lista))
-  [cond [(empty? total_acoes) (cons total_acoes (compra_acoes (acoes-nome (first lista)) (acoes-close (first lista))))]
-        [else (comprar-acao (rest total_acoes) lista carteira)]]))
+  (- carteira (acoes-close (first lista)))
+  (append total_acoes (compra_acoes (acoes-nome(first lista)))))
 
+
+;;funf
 (define (vender-acao total_acoes lista carteira)
   (+ carteira (acoes-close (first lista)))
-  [cond [(equal? (compra_acoes-empresa (first total_acoes)) (acoes-nome(first lista) (cons total_acoes (rest total_acoes))))]])
-  
-(define (listar_acoes lista)
-  [cond [(empty? lista) empty]
-        [else (cons lista (listar_acoes (compra_acoes (first lista) (second lista))))]])
-        
-(define compra_e_venda
+  [cond [(equal? (compra_acoes-empresa (first total_acoes)) (acoes-nome(first lista))) (rest total_acoes)]
+        [else (cons (first total_acoes) (vender-acao (rest total_acoes) lista carteira))]])
+
+(define opcao 0)
+
+
+
+(define (compra_e_venda opcao)
   (define carteira 10000)
-  (define total_acoes (cons empty))
+  (define total_acoes empty)
+  (printf "Valor carteira ~a\n" carteira)
+  (displayln "1) Comprar acao")
+  (displayln "2) Vender acao")
+  (displayln "3) Nenhuma acao")
+  (displayln "4) Sair.")
+  (set! opcao (string->number (read-line)))
+
+  [cond
+    [(= opcao 0) (display "Saindo...")]
+    [(= opcao 1) (displayln "Digite o nome da empresa: ") (comprar-acao total_acoes (string->keyword(read-line)) carteira) (compra_e_venda opcao)]])
   
-  
+(define a (list (compra_acoes "Microsoft") (compra_acoes "Microsoft") (compra_acoes "Google") (compra_acoes "Google") (compra_acoes "Google") (compra_acoes "Google")))
+
+(define (listar_acoes lista) lista)
+
+
+
+
+
+
+

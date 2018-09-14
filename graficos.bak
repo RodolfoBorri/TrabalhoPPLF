@@ -1,0 +1,15 @@
+;///acoes google grafico
+
+(define (preco lista)
+  (cond [(empty? lista) empty]
+        [else (cons (acoes-close (first lista)) (preco (rest lista)))]))
+
+(define (gera valor)
+  (cond [(= valor 0) empty]
+        [else (cons valor (gera (sub1 valor)))]))
+
+(define plot1 (preco Google))
+
+(define plot2 (reverse (gera (length plot1))))
+
+;(plot (lines (map vector plot2 plot1)) #:y-min 1000)
