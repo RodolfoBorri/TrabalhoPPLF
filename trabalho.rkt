@@ -4,7 +4,7 @@
 (require srfi/19)
 (require rackunit)
 (require rackunit/text-ui)
-
+(require plot)
 
 ;;Função para poder ser realizada a leitura de arquivos .csv
 (define (csvfile->list filename)
@@ -210,46 +210,127 @@
 ;Fim execução testes                 /
 ;-----------------------------------/
 
-(struct compra_acoes (empresa) #:transparent)
+(define date 0)
 
+;;Data, lista -> lista
+;;Recebe uma data e uma lista, e percorre a lista até a data inserida
+(define (run_to_date data lista)
+ [cond [(empty? lista) "Nao existe proxima data valida para a data inserida"]
+        [(> (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first lista)) "~d-~m-~Y"))) (run_to_date data (rest lista))]
+        [(= (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first lista)) "~d-~m-~Y")))
+        [cond
+          [(> (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first lista)) "~d-~m-~Y"))) (run_to_date data (rest lista))]
+          [(= (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first lista)) "~d-~m-~Y"))) lista]
+          [else (run_to_date data (rest lista))]]]])
 
-;;funf
-(define (comprar-acao total_acoes lista carteira)
-  (- carteira (acoes-close (first lista)))
-  (append total_acoes (compra_acoes (acoes-nome(first lista)))))
+;;Data->Função
+;;Recebe uma data para inicio da função de compra e venda
+(define (data_inicio date)
+  (displayln "Digite uma data para começar no formato ~d-~m~y: ")
+  (set! date (read-line))
+  (compra_e_venda date (run_to_date date Google) (run_to_date date Microsoft) (run_to_date date Petrobras)))
 
+;;Data->Função
+;;Recebe uma data para prosseguir a execução da funcao de compra e venda
+(define (dataSubsequente date)
+  (compra_e_venda date (run_to_date date Google) (run_to_date date Microsoft) (run_to_date date Petrobras)))
 
-;;funf
-(define (vender-acao total_acoes lista carteira)
-  (+ carteira (acoes-close (first lista)))
-  [cond [(equal? (compra_acoes-empresa (first total_acoes)) (acoes-nome(first lista))) (rest total_acoes)]
-        [else (cons (first total_acoes) (vender-acao (rest total_acoes) lista carteira))]])
+;;Data, lista, lista, lista -> void
+;;Recebe uma data e 3 sublistas, cada uma correspondente aos dados de uma empresa específica, a função simula a compra e venda de ações dia por dia
+(define (compra_e_venda dia lisGoogle lisMicro lisPetro)
 
-(define opcao 0)
+(define opcao 0)  
+(define carteira 0)
+(define qntGoogle 0)
+(define qntMicro 0)
+(define qntPetro 0)
+(define choose 0)
+(define nome_empresa "g")
 
-
-
-(define (compra_e_venda opcao)
-  (define carteira 10000)
-  (define total_acoes empty)
-  (printf "Valor carteira ~a\n" carteira)
+  (displayln "\t\tDia")
+  (printf "----------  ~a ----------\n\n" dia)
+  (displayln "0) Sair.")
   (displayln "1) Comprar acao")
-  (displayln "2) Vender acao")
-  (displayln "3) Nenhuma acao")
-  (displayln "4) Sair.")
+  (displayln "2) Nenhuma acao")
   (set! opcao (string->number (read-line)))
 
   [cond
-    [(= opcao 0) (display "Saindo...")]
-    [(= opcao 1) (displayln "Digite o nome da empresa: ") (comprar-acao total_acoes (string->keyword(read-line)) carteira) (compra_e_venda opcao)]])
+    [(= opcao 0) (display "Finalizado.")]
+    [(= opcao 1) (displayln "Valor ações: ")
+                 (displayln (string-append "\tGoogle: " (number->string(acoes-close (first lisGoogle)))))
+                 (displayln (string-append "\tMicrosoft: " (number->string(acoes-close (first lisMicro)))))
+                 (displayln (string-append "\tPetrobras: " (number->string(acoes-close (first lisPetro))) "\n"))
+                 
+                 (define (menu-compras choose)
+                 (displayln "0) Sair")
+                 (displayln "1) Comprar ação")        
+                 (set! choose (string->number (read-line)))
+
+                 [cond
+                   [(= choose 0) (displayln "Saindo..")]
+                   [(= choose 1) (displayln "Digite o nome da empresa: ")
+                                 (set! nome_empresa (read-line))
+                                 [cond [(string-locale=? "Google" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntGoogle (+ qntGoogle (string->number(read-line))))]
+                                       [(string-locale=? "Microsoft" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntMicro (+ qntMicro (string->number(read-line))))]                                                                        
+                                       [(string-locale=? "Petrobras" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntPetro (+ qntPetro (string->number(read-line))))]]
+                                 
+                                 (displayln (string-append "\t\tGoogle\t\tMicrosoft\t\tPetrobras"))
+                                 (displayln (string-append "Minhas ações: \t" (number->string qntGoogle) "\t\t" (number->string qntMicro) "\t\t\t" (number->string qntPetro)))(menu-compras choose)]])
+
+                 (menu-compras choose)
+
+
+                 (displayln (string-append "\t\tGoogle\t\tMicrosoft\t\tPetrobras"))
+                 (displayln (string-append "Minhas ações: \t" (number->string qntGoogle) "\t\t" (number->string qntMicro) "\t\t\t" (number->string qntPetro)))
+                 
+                 (set! carteira (+ (* qntGoogle (- (acoes-close (first (rest lisGoogle))) (acoes-close (first lisGoogle))))
+                                   (* qntMicro (- (acoes-close (first (rest lisMicro))) (acoes-close (first lisMicro))))
+                                   (* qntPetro (- (acoes-close (first (rest lisPetro))) (acoes-close (first lisPetro))))))
+                 [cond
+                   [(>= carteira 0) (display "\nLucro: ")]
+                   [(< carteira 0) (display "\nPerda: ")]]
+
+                 (displayln (string-append (number->string carteira) "\n")) (dataSubsequente (proxDataValida dia Google))]
+    
+    [(= opcao 2) (dataSubsequente (proxDataValida dia Google))]])
+
+
+
+;/////////Graficos////////
+
+
+(define (preco lista)
+  (cond [(empty? lista) empty]
+        [else (cons (acoes-close (first lista)) (preco (rest lista)))]))
+
+(define (gera valor)
+  (cond [(= valor 0) empty]
+        [else (cons valor (gera (sub1 valor)))]))
+
+
+;;plot acoes google
+
+(define plot1 (preco Google))
+
+(define plot2 (reverse (gera (length plot1))))
+
+;;gerador
+;(plot (lines (map vector plot2 plot1)) #:title (string-append "Valor ações: " nome_read) #:y-min 1000 #:width 1300 #:y-label "Valor close" #:x-label "Dias")
+
+
+
+(define opcao 0)
+
+(define (main-menu opcao)
+  (displayln "0. Finalizar")
+  (displayln "1. Preço ação empresa")
+  (displayln "2. Calcular MMS")
+  (displayln "3. Calcular MME")
+  (displayln "4. Calcular RSI")
+  (displayln "5. Calcular MACD")
+  (displayln "6. Calcular Correlacao")
+  (displayln "7. Verificar proxima data valida")
+  (displayln "8. Verificar data anterior valida")
+  (displayln "9. Simular compra e venda de ações")
+  )
   
-(define a (list (compra_acoes "Microsoft") (compra_acoes "Microsoft") (compra_acoes "Google") (compra_acoes "Google") (compra_acoes "Google") (compra_acoes "Google")))
-
-(define (listar_acoes lista) lista)
-
-
-
-
-
-
-
