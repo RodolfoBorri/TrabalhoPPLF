@@ -1,10 +1,11 @@
-#lang racket
+#lang racket/gui
 
 (require csv-reading)
 (require srfi/19)
 (require rackunit)
 (require rackunit/text-ui)
 (require plot)
+(require racket/gui/base)
 
 ;;Função para poder ser realizada a leitura de arquivos .csv
 (define (csvfile->list filename)
@@ -262,7 +263,8 @@
                  (displayln (string-append "\tPetrobras: " (number->string(acoes-close (first lisPetro))) "\n"))
                  
                  (define (menu-compras choose)
-                 (displayln "0) Sair")
+                 (displayln "-- Ao fim da compra será calculado seu lucro/perda --\n")
+                 (displayln "0) Finalizar compras")
                  (displayln "1) Comprar ação")        
                  (set! choose (string->number (read-line)))
 
@@ -299,29 +301,41 @@
 ;/////////Graficos////////
 
 
-(define (preco lista)
+(define (close lista)
   (cond [(empty? lista) empty]
-        [else (cons (acoes-close (first lista)) (preco (rest lista)))]))
+        [else (cons (acoes-close (first lista)) (close (rest lista)))]))
 
-(define (gera valor)
+(define (constroi valor)
   (cond [(= valor 0) empty]
-        [else (cons valor (gera (sub1 valor)))]))
+        [else (cons valor (constroi (sub1 valor)))]))
 
 
 ;;plot acoes google
 
-(define plot1 (preco Google))
+;(define plot1 (close Google))
 
-(define plot2 (reverse (gera (length plot1))))
+;(define plot2 (reverse (constroi (length plot1))))
 
 ;;gerador
 ;(plot (lines (map vector plot2 plot1)) #:title (string-append "Valor ações: " nome_read) #:y-min 1000 #:width 1300 #:y-label "Valor close" #:x-label "Dias")
 
 
+(define main-window (new frame%
+                       [label "Simulador de ações"]
+                       [width 1100]
+                       [height 600]
+                       [style '(fullscreen-button)]
+                       [alignment '(left top)]))
 
+ 
+                    
 (define opcao 0)
 
 (define (main-menu opcao)
+  (define nome_emp "teste")
+  (define periodo 10)
+  (define periodo2 10)
+  
   (displayln "0. Finalizar")
   (displayln "1. Preço ação empresa")
   (displayln "2. Calcular MMS")
@@ -332,5 +346,61 @@
   (displayln "7. Verificar proxima data valida")
   (displayln "8. Verificar data anterior valida")
   (displayln "9. Simular compra e venda de ações")
-  )
-  
+
+  (set! opcao (string->number (read-line)))
+
+  [cond [(= opcao 0) (displayln "Saindo...")]
+        
+        [(= opcao 1) (displayln "Digite o nome da empresa: ")
+                     (set! nome_emp (read-line))
+                           (define plot1 (close (separa_acoes_nome empresas nome_emp)))
+                           (define plot2 (reverse (constroi (length plot1))))
+
+
+                           (define canvas (new canvas%
+                                               [parent main-window]
+                                               [stretchable-width #t]
+                                               [stretchable-height #t]
+                                               [paint-callback (lambda (canvas dc)
+                                                                 (plot/dc (lines (map vector plot2 plot1)) (send canvas get-dc) 0 0 1000 500 #:title (string-append "Valor ações: " nome_emp) #:y-label "Valor close" #:x-label "Dias"))]))
+                           (send canvas show #t)
+                       (send main-window show #t)]    
+
+        [(= opcao 2) (displayln "Digite o nome da empresa: ")
+                     (set! nome_emp (read-line))
+                     (displayln "Digite a quantidade de períodos: ")
+                     (set! periodo (read-line))
+                     (define plot1 (media-movel-simples (separa_acoes_nome empresas  nome_emp) (string->number periodo)))
+                     (define plot2 (reverse (constroi (length plot1))))
+                     (plot (lines (map vector plot2 plot1)) #:title (string-append "Valor MMS: " nome_emp) #:width 1200 #:y-label "Valor MMS" #:x-label "Periodo")]
+                          
+
+        [(= opcao 3) (displayln "Digite o nome da empresa: ")
+                     (set! nome_emp (read-line))
+                     (displayln "Digite a quantidade de períodos: ")
+                     (set! periodo (read-line))
+                     (define plot1 (exponencial (separa_acoes_nome empresas nome_emp) (string->number periodo)))
+                     (define plot2 (reverse (constroi (length plot1))))
+                     (plot (lines (map vector plot2 plot1)) #:title (string-append "Valor MME: " nome_emp) #:width 1200 #:y-label "Valor MME" #:x-label "Periodo")]
+
+        [(= opcao 4)] ;Chamada RSI
+
+
+        [(= opcao 5) (displayln "Digite o nome da empresa: ")
+                     (set! nome_emp (read-line))
+                     (displayln "Digite a primeira quantidade de períodos: ")
+                     (set! periodo (read-line))
+                     (displayln "Digite a segunda quantidade de períodos: ")
+                     (set! periodo2 (read-line))
+
+                     (define plot1 (moving-average (separa_acoes_nome empresas nome_emp) (string->number periodo) (string->number periodo2)))
+                     (define plot2 (reverse (constroi (length plot1))))
+                     (plot (lines (map vector plot2 plot1)) #:title (string-append "Valor MACD: " nome_emp) #:width 1200 #:y-label "Valor MACD" #:x-label "Periodo")]
+
+        [(= opcao 6) (displayln "Digite o nome da primeira empresa: ")
+                     (set! nome_emp (read-line))]])
+         
+
+
+(main-menu opcao)
+
