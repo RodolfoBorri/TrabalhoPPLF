@@ -101,24 +101,28 @@
 ;;Data, Lista -> Data
 ;;Recebe uma lista (nome de empresa) e uma data, a função retorna a proxima data válida a partir da data recebida
 (define (proxDataValida data lista)
-  [cond [(empty? lista) "Nao existe proxima data valida para a data inserida"]
-        [(> (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first lista)) "~d-~m-~Y"))) (proxDataValida data (rest lista))]
-        [(= (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first lista)) "~d-~m-~Y")))
-        [cond
-          [(> (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first lista)) "~d-~m-~Y"))) (proxDataValida data (rest lista))]
-          [(< (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first lista)) "~d-~m-~Y"))) (acoes-data (first lista))]
-          [else (proxDataValida data (rest lista))]]]])
+  [cond [(not (equal? 2018 (date-year (string->date data "~d-~m-~Y")))) (displayln "\nData invalida")]
+        [else
+         [cond [(empty? lista) "Nao existe proxima data valida para a data inserida"]
+               [(> (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first lista)) "~d-~m-~Y"))) (proxDataValida data (rest lista))]
+               [(= (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first lista)) "~d-~m-~Y")))
+                [cond
+                  [(> (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first lista)) "~d-~m-~Y"))) (proxDataValida data (rest lista))]
+                  [(< (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first lista)) "~d-~m-~Y"))) (acoes-data (first lista))]
+                  [else (proxDataValida data (rest lista))]]]]]])
 
 ;;Data, lista -> Data
 ;;Recebe uma data e uma lista e retorna a data válida antecendente a recebida
 (define (prevDataValida data lista)
-  [cond [(empty? lista) "Nao existe data anterior valida para a data inserida"]
-        [(> (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first (rest lista))) "~d-~m-~Y"))) (prevDataValida data (rest lista))]
-        [(= (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first (rest lista))) "~d-~m-~Y")))
-        [cond
-          [(> (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first (rest lista))) "~d-~m-~Y"))) (prevDataValida data (rest lista))]
-          [(<= (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first (rest lista))) "~d-~m-~Y"))) (acoes-data (first lista))]
-          [else (prevDataValida data (rest lista))]]]])
+  [cond [(not (equal? 2018 (date-year (string->date data "~d-~m-~Y")))) (displayln "\nData invalida")]
+        [else
+         [cond [(empty? lista) "Nao existe data anterior valida para a data inserida"]
+               [(> (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first (rest lista))) "~d-~m-~Y"))) (prevDataValida data (rest lista))]
+               [(= (date-month (string->date data "~d-~m-~Y")) (date-month(string->date (acoes-data (first (rest lista))) "~d-~m-~Y")))
+                [cond
+                  [(> (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first (rest lista))) "~d-~m-~Y"))) (prevDataValida data (rest lista))]
+                  [(<= (date-day (string->date data "~d-~m-~Y")) (date-day (string->date (acoes-data (first (rest lista))) "~d-~m-~Y"))) (acoes-data (first lista))]
+                  [else (prevDataValida data (rest lista))]]]]]])
 
 ;;Lista, dias -> Lista
 ;;Recebe uma lista e um periodo de dias, faz o calculo do MMS para ser usado na 1 iteração do MME, e em seguida chama a funcao de calculo do MME
@@ -155,6 +159,80 @@
   [cond [(empty? per1) empty]
         [(empty? per2) empty]
         [else (cons (- (first per1) (first per2)) (MACD lista (rest per1) (rest per2)))]])
+
+
+;;Lista, periodo -> Numero
+;;Recebe uma lista e calcula a soma da subtração de dois dias de fechamento, dado que essa subtração seja positiva
+(define (verAumento lista num)
+  [cond [(zero? num) 0]
+        [(empty? (rest lista)) 0]
+
+        [else
+         [cond [(> (* (- (acoes-close (first lista)) (acoes-close (first (rest lista)))) -1) 0)
+                (+ (* (- (acoes-close (first lista)) (acoes-close (first (rest lista)))) -1) (verAumento (rest lista) (sub1 num)))]
+         
+               [else (verAumento (rest lista) (sub1 num))]]]])
+
+
+;;Lista, periodo -> Numero
+;;Recebe uma lista e calcula a soma da subtração de dois dias de fechamento, dado que essa subtração seja negativa
+(define (verDiminui lista num)
+  [cond [(zero? num) 0]
+        [(empty? (rest lista)) 0]
+
+        [else
+         [cond [(< (* (- (acoes-close (first lista)) (acoes-close (first (rest lista)))) -1) 0)
+                (+ (* (- (acoes-close (first lista)) (acoes-close (first (rest lista)))) -1) (verDiminui (rest lista) (sub1 num)))]
+         
+               [else (verDiminui (rest lista) (sub1 num))]]]])
+
+;;Lista, periodo -> Numero
+;;Recebe uma lista e calcula a quantidade de dias em que a subtração de dois dias de fechamento foram maior que 0
+(define (qntAumento lista num)
+  [cond [(zero? num) 0]
+        [(empty? (rest lista)) 0]
+
+        [else
+         [cond [(> (* (- (acoes-close (first lista)) (acoes-close (first (rest lista)))) -1) 0)
+                (add1 (qntAumento (rest lista) (sub1 num)))]
+               [else (qntAumento (rest lista) (sub1 num))]]]])
+
+;;Lista, periodo -> Numero
+;;Recebe uma lista e calcula a quantidade de dias em que a subtração de dois dias de fechamento foram menor que 0
+(define (qntDiminui lista num)
+ [cond [(zero? num) 0]
+        [(empty? (rest lista)) 0]
+
+        [else
+         [cond [(< (* (- (acoes-close (first lista)) (acoes-close (first (rest lista)))) -1) 0)
+                (add1 (qntDiminui (rest lista) (sub1 num)))]
+               [else (qntDiminui (rest lista) (sub1 num))]]]])
+
+
+
+
+;;Lista, periodo
+;;Recebe uma lista e um periodo, chama as funções de calculo de soma e quantidade e faz o calculo da força relativa usado na funcao de RSI
+(define (ForcaRelativa lista periodo)
+  (define valorAumento 0)
+  (define valorDiminui 0)
+  (define qntiAumento 0)
+  (define qntiDiminui 0)
+
+  
+  (set! valorAumento (verAumento lista periodo))
+  (set! valorDiminui (verDiminui lista periodo))
+  (set! qntiAumento (qntAumento lista periodo))
+  (set! qntiDiminui (qntDiminui lista periodo))
+ 
+  [cond [(or (= qntiAumento 0) (= qntiDiminui 0)) 0]
+        [else (/ (/ valorAumento qntiAumento) (/ (* valorDiminui -1) qntiDiminui))]])
+
+;;Lista, periodo
+;;Recebe uma lista e um periodo e efetua o calculo de RSI para um periodo de x dias
+(define (RSI lista periodo)
+  [cond [(empty? lista) empty]
+        [else (cons (- 100 (/ 100 (+ 1 (ForcaRelativa lista periodo)))) (RSI (rest lista) periodo))]])
         
 ;;------------------------------------/
 ;;Execução de testes                 /
@@ -199,13 +277,20 @@
   (check-equal? (first(moving-average Petrobras 12 26)) -0.9373076923076944)
   (check-equal? (first(moving-average Microsoft 12 26)) -2.069808198717922)))
 
+(define test-RSI
+  (test-suite "Testes RSI"
+  (check-equal? (first (RSI Google 10)) 86.43485803815199)
+  (check-equal? (first (RSI Microsoft 16)) 72.09370788300682)
+  (check-equal? (first (RSI Petrobras 12)) 64.78342749529193)))
+
+  
 ;(executa-testes test-MME)
 ;(executa-testes test-MMS)
 ;(executa-testes test-correl)
 ;(executa-testes test-next-date)
 ;(executa-testes test-prev-date)
 ;(executa-testes test-MACD)
-
+;(executa-testes test-RSI)
 
 ;-------------------------------------/
 ;Fim execução testes                 /
@@ -227,9 +312,11 @@
 ;;Data->Função
 ;;Recebe uma data para inicio da função de compra e venda
 (define (data_inicio date)
-  (displayln "Digite uma data para começar no formato ~d-~m~y: ")
+  (displayln "Digite uma data para começar no formato ~d-~m~y (com aspas duplas): ")
   (set! date (read-line))
-  (compra_e_venda date (run_to_date date Google) (run_to_date date Microsoft) (run_to_date date Petrobras)))
+  [cond [(not (equal? 2018 (date-year (string->date date "~d-~m-~Y")))) (displayln "\nData invalida")]
+        
+  [else (compra_e_venda date (run_to_date date Google) (run_to_date date Microsoft) (run_to_date date Petrobras))]])
 
 ;;Data->Função
 ;;Recebe uma data para prosseguir a execução da funcao de compra e venda
@@ -256,14 +343,14 @@
   (set! opcao (string->number (read-line)))
 
   [cond
-    [(= opcao 0) (display "Finalizado.")]
+    [(= opcao 0) (display "\nFinalizado.\n")]
     [(= opcao 1) (displayln "Valor ações: ")
-                 (displayln (string-append "\tGoogle: " (number->string(acoes-close (first lisGoogle)))))
-                 (displayln (string-append "\tMicrosoft: " (number->string(acoes-close (first lisMicro)))))
-                 (displayln (string-append "\tPetrobras: " (number->string(acoes-close (first lisPetro))) "\n"))
+                 (displayln (string-append "\t\tGoogle: " (number->string(acoes-close (first lisGoogle)))))
+                 (displayln (string-append "\t\tMicrosoft: " (number->string(acoes-close (first lisMicro)))))
+                 (displayln (string-append "\t\tPetrobras: " (number->string(acoes-close (first lisPetro))) "\n"))
                  
                  (define (menu-compras choose)
-                 (displayln "-- Ao fim da compra será calculado seu lucro/perda --\n")
+                 (displayln "\n-- Ao fim da compra será calculado seu lucro/perda --\n")
                  (displayln "0) Finalizar compras")
                  (displayln "1) Comprar ação")        
                  (set! choose (string->number (read-line)))
@@ -272,9 +359,11 @@
                    [(= choose 0) (displayln "Saindo..")]
                    [(= choose 1) (displayln "Digite o nome da empresa: ")
                                  (set! nome_empresa (read-line))
-                                 [cond [(string-locale=? "Google" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntGoogle (+ qntGoogle (string->number(read-line))))]
-                                       [(string-locale=? "Microsoft" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntMicro (+ qntMicro (string->number(read-line))))]                                                                        
-                                       [(string-locale=? "Petrobras" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntPetro (+ qntPetro (string->number(read-line))))]]
+                                 [cond [(not (or (equal? nome_empresa "Google") (equal? nome_empresa "Microsoft") (equal? nome_empresa "Petrobras"))) (displayln "\n**Nome empresa invalido**\n")]
+                                       [else
+                                        [cond [(string-locale=? "Google" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntGoogle (+ qntGoogle (string->number(read-line))))]
+                                              [(string-locale=? "Microsoft" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntMicro (+ qntMicro (string->number(read-line))))]                                                                        
+                                              [(string-locale=? "Petrobras" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntPetro (+ qntPetro (string->number(read-line))))]]]]
                                  
                                  (displayln (string-append "\t\tGoogle\t\tMicrosoft\t\tPetrobras"))
                                  (displayln (string-append "Minhas ações: \t" (number->string qntGoogle) "\t\t" (number->string qntMicro) "\t\t\t" (number->string qntPetro)))(menu-compras choose)]])
@@ -298,7 +387,7 @@
 
 
 
-;/////////Graficos////////
+;----------FUNÇÕES CONSTRUÇÃO GRAFICOS-----------
 
 
 (define (close lista)
@@ -309,35 +398,24 @@
   (cond [(= valor 0) empty]
         [else (cons valor (constroi (sub1 valor)))]))
 
-
-;;plot acoes google
-
-;(define plot1 (close Google))
-
-;(define plot2 (reverse (constroi (length plot1))))
-
-;;gerador
-;(plot (lines (map vector plot2 plot1)) #:title (string-append "Valor ações: " nome_read) #:y-min 1000 #:width 1300 #:y-label "Valor close" #:x-label "Dias")
-
-
-(define main-window (new frame%
-                       [label "Simulador de ações"]
-                       [width 1100]
-                       [height 600]
-                       [style '(fullscreen-button)]
-                       [alignment '(left top)]))
-
- 
+;---------------------FIM------------------------
                     
 (define opcao 0)
 
 (define (main-menu opcao)
   (define nome_emp "teste")
+  (define nome_emp2 "teste")
   (define periodo 10)
   (define periodo2 10)
+  (define date "teste")
+
+  (sorting Google)
+  (sorting Microsoft)
+  (sorting Petrobras)
   
+  (displayln "\n---------- Menu principal ----------\n")
   (displayln "0. Finalizar")
-  (displayln "1. Preço ação empresa")
+  (displayln "1. Valor ações empresa")
   (displayln "2. Calcular MMS")
   (displayln "3. Calcular MME")
   (displayln "4. Calcular RSI")
@@ -351,56 +429,96 @@
 
   [cond [(= opcao 0) (displayln "Saindo...")]
         
-        [(= opcao 1) (displayln "Digite o nome da empresa: ")
+        [(= opcao 1) (displayln "\n ---- Valor Ações ----\n")
+                     (displayln "Digite o nome da empresa: ")
                      (set! nome_emp (read-line))
+                     [cond [(not (or (equal? nome_emp "Google") (equal? nome_emp "Microsoft") (equal? nome_emp "Petrobras"))) (displayln "\nNome empresa invalido") (main-menu opcao)]
+                     [else 
                            (define plot1 (close (separa_acoes_nome empresas nome_emp)))
                            (define plot2 (reverse (constroi (length plot1))))
+                           (plota-grafico plot1 plot2 nome_emp "Ações") (main-menu opcao)]]]
+                               
 
-
-                           (define canvas (new canvas%
-                                               [parent main-window]
-                                               [stretchable-width #t]
-                                               [stretchable-height #t]
-                                               [paint-callback (lambda (canvas dc)
-                                                                 (plot/dc (lines (map vector plot2 plot1)) (send canvas get-dc) 0 0 1000 500 #:title (string-append "Valor ações: " nome_emp) #:y-label "Valor close" #:x-label "Dias"))]))
-                           (send canvas show #t)
-                       (send main-window show #t)]    
-
-        [(= opcao 2) (displayln "Digite o nome da empresa: ")
+        [(= opcao 2) (displayln "\n ---- Calculo de MMS ----\n")
+                     (displayln "Digite o nome da empresa: ")
                      (set! nome_emp (read-line))
-                     (displayln "Digite a quantidade de períodos: ")
-                     (set! periodo (read-line))
-                     (define plot1 (media-movel-simples (separa_acoes_nome empresas  nome_emp) (string->number periodo)))
-                     (define plot2 (reverse (constroi (length plot1))))
-                     (plot (lines (map vector plot2 plot1)) #:title (string-append "Valor MMS: " nome_emp) #:width 1200 #:y-label "Valor MMS" #:x-label "Periodo")]
+                     [cond [(not (or (equal? nome_emp "Google") (equal? nome_emp "Microsoft") (equal? nome_emp "Petrobras"))) (displayln "\nNome empresa invalido") (main-menu opcao)]
+                     [else (displayln "Digite a quantidade de períodos: ")
+                           (set! periodo (read-line))
+                           (define plot1 (media-movel-simples (separa_acoes_nome empresas  nome_emp) (string->number periodo)))
+                           (define plot2 (reverse (constroi (length plot1))))
+                           (plota-grafico plot1 plot2 nome_emp "MMS") (main-menu opcao)]]]
                           
 
-        [(= opcao 3) (displayln "Digite o nome da empresa: ")
+        [(= opcao 3) (displayln "\n ---- Calculo de MME ----\n")
+                     (displayln "Digite o nome da empresa: ")
                      (set! nome_emp (read-line))
-                     (displayln "Digite a quantidade de períodos: ")
-                     (set! periodo (read-line))
-                     (define plot1 (exponencial (separa_acoes_nome empresas nome_emp) (string->number periodo)))
-                     (define plot2 (reverse (constroi (length plot1))))
-                     (plot (lines (map vector plot2 plot1)) #:title (string-append "Valor MME: " nome_emp) #:width 1200 #:y-label "Valor MME" #:x-label "Periodo")]
+                     [cond [(not (or (equal? nome_emp "Google") (equal? nome_emp "Microsoft") (equal? nome_emp "Petrobras"))) (displayln "\nNome empresa invalido") (main-menu opcao)]
+                     [else (displayln "Digite a quantidade de períodos: ")
+                           (set! periodo (read-line))
+                           (define plot1 (exponencial (separa_acoes_nome empresas nome_emp) (string->number periodo)))
+                           (define plot2 (reverse (constroi (length plot1))))
+                           (plota-grafico plot1 plot2 nome_emp "MME") (main-menu opcao)]]]
 
-        [(= opcao 4)] ;Chamada RSI
-
-
-        [(= opcao 5) (displayln "Digite o nome da empresa: ")
+       [(= opcao 4) (displayln "\n ---- Calculo de RSI ----\n")
+                     (displayln "Digite o nome da empresa: ")
                      (set! nome_emp (read-line))
-                     (displayln "Digite a primeira quantidade de períodos: ")
-                     (set! periodo (read-line))
-                     (displayln "Digite a segunda quantidade de períodos: ")
-                     (set! periodo2 (read-line))
+                     [cond [(not (or (equal? nome_emp "Google") (equal? nome_emp "Microsoft") (equal? nome_emp "Petrobras"))) (displayln "\nNome empresa invalido") (main-menu opcao)]
+                     [else (displayln "Digite a quantidade de períodos: ")
+                           (set! periodo (read-line))
+                           (define plot1 (RSI (separa_acoes_nome empresas nome_emp) (string->number periodo)))
+                           (define plot2 (reverse (constroi (length plot1))))
+                           (plota-grafico plot1 plot2 nome_emp "RSI") (main-menu opcao)]]]
 
-                     (define plot1 (moving-average (separa_acoes_nome empresas nome_emp) (string->number periodo) (string->number periodo2)))
-                     (define plot2 (reverse (constroi (length plot1))))
-                     (plot (lines (map vector plot2 plot1)) #:title (string-append "Valor MACD: " nome_emp) #:width 1200 #:y-label "Valor MACD" #:x-label "Periodo")]
 
-        [(= opcao 6) (displayln "Digite o nome da primeira empresa: ")
-                     (set! nome_emp (read-line))]])
-         
+        [(= opcao 5) (displayln "\n ---- Calculo de MACD ----\n")
+                     (displayln "Digite o nome da empresa: ")
+                     (set! nome_emp (read-line))
+                     [cond [(not (or (equal? nome_emp "Google") (equal? nome_emp "Microsoft") (equal? nome_emp "Petrobras"))) (displayln "\nNome empresa invalido") (main-menu opcao)]
+                     [else (displayln "Digite a primeira quantidade de períodos: ")
+                           (set! periodo (read-line))
+                           (displayln "Digite a segunda quantidade de períodos: ")
+                           (set! periodo2 (read-line))
 
+                           (define plot1 (moving-average (separa_acoes_nome empresas nome_emp) (string->number periodo) (string->number periodo2)))
+                           (define plot2 (reverse (constroi (length plot1))))
+                           (plota-grafico plot1 plot2 nome_emp "MACD") (main-menu opcao)]]]
+
+        [(= opcao 6) (displayln "\n ---- Calculo de correlação ----\n")
+                     (displayln "Digite o nome da primeira empresa: ")
+                     (set! nome_emp (read-line))
+                     [cond [(not (or (equal? nome_emp "Google") (equal? nome_emp "Microsoft") (equal? nome_emp "Petrobras"))) (displayln "\nNome empresa invalido") (main-menu opcao)]
+                     [else (displayln "Digite o nome da segunda empresa: ")
+                     (set! nome_emp2 (read-line))
+                     (displayln (string-append "\n---- O nível de correlação entre " nome_emp " e " nome_emp2 " é: ---- \n" "\t          "
+                                               (number->string(Correlacao (separa_acoes_nome empresas nome_emp) (separa_acoes_nome empresas nome_emp2))))) (main-menu opcao)]]]
+
+        [(= opcao 7) (displayln "\n ---- Verificação Próxima Data Válida ----\n")
+                     (displayln "Digite o nome da empresa: ")
+                     (set! nome_emp (read-line))
+                     [cond [(not (or (equal? nome_emp "Google") (equal? nome_emp "Microsoft") (equal? nome_emp "Petrobras"))) (displayln "\nNome empresa invalido") (main-menu opcao)]
+                     [else (displayln (string-append "Digite uma data no formato " "~d-~m-~y (com aspas duplas): " ))
+                           (set! date (read-line))
+                           (displayln (string-append "\nA próxima data válida a partir de " date " é "
+                                                     (proxDataValida date (separa_acoes_nome empresas nome_emp)) "\n"))(main-menu opcao)]]]
+                           
+
+        [(= opcao 8) (displayln "\n ---- Verificação Data Anterior Válida ----\n")
+                     (displayln "Digite o nome da empresa: ")
+                     (set! nome_emp (read-line))
+                     [cond [(not (or (equal? nome_emp "Google") (equal? nome_emp "Microsoft") (equal? nome_emp "Petrobras"))) (displayln "\nNome empresa invalido") (main-menu opcao)]
+                     [else (displayln (string-append "Digite uma data no formato " "~d-~m-~y (com aspas duplas): " ))
+                           (set! date (read-line))
+                           (displayln (string-append "\nA data anterior válida a partir de " date " é "
+                                                     (prevDataValida date (separa_acoes_nome empresas nome_emp)) "\n"))(main-menu opcao)]]]
+
+        [(= opcao 9) (displayln "\n ---- Compra e Venda de ações ----\n")
+                     (data_inicio date)
+                     (main-menu opcao)]])
+
+
+(define (plota-grafico plot1 plot2 nome_emp nome)
+  (display (plot (lines (map vector plot2 plot1))
+        #:title (string-append "Valor " nome ": " nome_emp) #:width 1300 #:y-label (string-append "Valor " nome) #:x-label "Periodo")))
 
 (main-menu opcao)
-
