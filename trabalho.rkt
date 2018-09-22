@@ -281,16 +281,16 @@
   (test-suite "Testes RSI"
   (check-equal? (first (RSI Google 10)) 86.43485803815199)
   (check-equal? (first (RSI Microsoft 16)) 72.09370788300682)
-  (check-equal? (first (RSI Petrobras 12)) 64.78342749529193)))
+  (check-equal? (first (RSI Petrobras 12)) 65.72580645161293)))
 
   
-;(executa-testes test-MME)
-;(executa-testes test-MMS)
-;(executa-testes test-correl)
-;(executa-testes test-next-date)
-;(executa-testes test-prev-date)
-;(executa-testes test-MACD)
-;(executa-testes test-RSI)
+(executa-testes test-MME)
+(executa-testes test-MMS)
+(executa-testes test-correl)
+(executa-testes test-next-date)
+(executa-testes test-prev-date)
+(executa-testes test-MACD)
+(executa-testes test-RSI)
 
 ;-------------------------------------/
 ;Fim execução testes                 /
@@ -390,18 +390,30 @@
 ;----------FUNÇÕES CONSTRUÇÃO GRAFICOS-----------
 
 
+;;Lista -> lista
+;;Recebe uma lista e retorna uma lista contendo apenas os valores de close de uma determinada empresa
 (define (close lista)
   (cond [(empty? lista) empty]
         [else (cons (acoes-close (first lista)) (close (rest lista)))]))
 
+;;Numero->lista
+;;Recebe um numero e constroi uma lista decrescente daquele numero até 0
 (define (constroi valor)
   (cond [(= valor 0) empty]
         [else (cons valor (constroi (sub1 valor)))]))
+
+;;Lista, lista, string, string -> grafico
+;;Recebe uma lista de numeros de periodo e uma lista contendo o que desejamos plotar, em seguida gera o grafico com base nos parametros dados
+(define (plota-grafico plot1 plot2 nome_emp nome)
+  (display (plot (lines (map vector plot2 plot1))
+        #:title (string-append "Valor " nome ": " nome_emp) #:width 1300 #:y-label (string-append "Valor " nome) #:x-label "Periodo")))
 
 ;---------------------FIM------------------------
                     
 (define opcao 0)
 
+;;Num -> void
+;;Menu principal, aqui ocorrerá toda a execução das funções implementadas
 (define (main-menu opcao)
   (define nome_emp "teste")
   (define nome_emp2 "teste")
@@ -516,9 +528,5 @@
                      (data_inicio date)
                      (main-menu opcao)]])
 
-
-(define (plota-grafico plot1 plot2 nome_emp nome)
-  (display (plot (lines (map vector plot2 plot1))
-        #:title (string-append "Valor " nome ": " nome_emp) #:width 1300 #:y-label (string-append "Valor " nome) #:x-label "Periodo")))
 
 (main-menu opcao)
