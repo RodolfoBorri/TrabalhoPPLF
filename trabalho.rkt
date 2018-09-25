@@ -1,11 +1,10 @@
-#lang racket/gui
+#lang racket
 
 (require csv-reading)
 (require srfi/19)
 (require rackunit)
 (require rackunit/text-ui)
 (require plot)
-(require racket/gui/base)
 
 ;;Função para poder ser realizada a leitura de arquivos .csv
 (define (csvfile->list filename)
@@ -297,6 +296,10 @@
 ;-----------------------------------/
 
 (define date 0)
+(define carteira 0)
+(define qntGoogle 0)
+(define qntMicro 0)
+(define qntPetro 0)
 
 ;;Data, lista -> lista
 ;;Recebe uma data e uma lista, e percorre a lista até a data inserida
@@ -316,74 +319,140 @@
   (set! date (read-line))
   [cond [(not (equal? 2018 (date-year (string->date date "~d-~m-~Y")))) (displayln "\nData invalida")]
         
-  [else (compra_e_venda date (run_to_date date Google) (run_to_date date Microsoft) (run_to_date date Petrobras))]])
+  [else (compra_e_venda date (run_to_date date Google) (run_to_date date Microsoft) (run_to_date date Petrobras) qntGoogle qntMicro qntPetro carteira)]])
 
 ;;Data->Função
 ;;Recebe uma data para prosseguir a execução da funcao de compra e venda
-(define (dataSubsequente date)
-  (compra_e_venda date (run_to_date date Google) (run_to_date date Microsoft) (run_to_date date Petrobras)))
+(define (dataSubsequente date qntiGoogle qntiMicro qntiPetro carteira)
+  (compra_e_venda date (run_to_date date Google) (run_to_date date Microsoft) (run_to_date date Petrobras) qntiGoogle qntiMicro qntiPetro carteira))
+
+
 
 ;;Data, lista, lista, lista -> void
 ;;Recebe uma data e 3 sublistas, cada uma correspondente aos dados de uma empresa específica, a função simula a compra e venda de ações dia por dia
-(define (compra_e_venda dia lisGoogle lisMicro lisPetro)
+(define (compra_e_venda dia lisGoogle lisMicro lisPetro qntGoogle qntMicro qntPetro carteira)
 
+(define valor 0)
 (define opcao 0)  
-(define carteira 0)
-(define qntGoogle 0)
-(define qntMicro 0)
-(define qntPetro 0)
 (define choose 0)
 (define nome_empresa "g")
 
   (displayln "\t\tDia")
   (printf "----------  ~a ----------\n\n" dia)
-  (displayln "0) Sair.")
-  (displayln "1) Comprar acao")
-  (displayln "2) Nenhuma acao")
-  (set! opcao (string->number (read-line)))
-
-  [cond
-    [(= opcao 0) (display "\nFinalizado.\n")]
-    [(= opcao 1) (displayln "Valor ações: ")
+  (printf "Valor Carteira: ~a\n" carteira)
+  (displayln "Valor ações: ")
                  (displayln (string-append "\t\tGoogle: " (number->string(acoes-close (first lisGoogle)))))
                  (displayln (string-append "\t\tMicrosoft: " (number->string(acoes-close (first lisMicro)))))
                  (displayln (string-append "\t\tPetrobras: " (number->string(acoes-close (first lisPetro))) "\n"))
+  (displayln "0) Finalizar simulação.")
+  (displayln "1) Comprar acao")
+  (displayln "2) Vender acao")
+  (displayln "3) Nenhuma acao")
+  (set! opcao (string->number (read-line)))
+
+  [cond
+    [(= opcao 0) (display "\nFinalizado.\n")
+
+                 [cond
+                   [(>= carteira 0) (display "\nLucro: ")]
+                   [(< carteira 0) (display "\nPerda: ")]]
                  
-                 (define (menu-compras choose)
-                 (displayln "\n-- Ao fim da compra será calculado seu lucro/perda --\n")
+                  (displayln (string-append (number->string carteira) "\n"))
+
+                  (displayln "Ações restantes: ")
+                  (displayln (string-append "\t\tGoogle\t\tMicrosoft\t\tPetrobras"))
+                  (displayln (string-append "              \t" (number->string qntGoogle) "\t\t" (number->string qntMicro) "\t\t\t" (number->string qntPetro)))]
+    
+    [(= opcao 1) (define (menu-compras choose)
+                 (displayln "-----Compra de ações-----\n")
                  (displayln "0) Finalizar compras")
                  (displayln "1) Comprar ação")        
                  (set! choose (string->number (read-line)))
 
                  [cond
-                   [(= choose 0) (displayln "Saindo..")]
+                   [(= choose 0) (displayln "Retornando ao menu..") (compra_e_venda dia lisGoogle lisMicro lisPetro qntGoogle qntMicro qntPetro carteira)]
                    [(= choose 1) (displayln "Digite o nome da empresa: ")
                                  (set! nome_empresa (read-line))
                                  [cond [(not (or (equal? nome_empresa "Google") (equal? nome_empresa "Microsoft") (equal? nome_empresa "Petrobras"))) (displayln "\n**Nome empresa invalido**\n")]
                                        [else
-                                        [cond [(string-locale=? "Google" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntGoogle (+ qntGoogle (string->number(read-line))))]
-                                              [(string-locale=? "Microsoft" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntMicro (+ qntMicro (string->number(read-line))))]                                                                        
-                                              [(string-locale=? "Petrobras" nome_empresa) (displayln "Digite a quantidade de ações: ") (set! qntPetro (+ qntPetro (string->number(read-line))))]]]]
+                                        [cond [(string-locale=? "Google" nome_empresa) (displayln "Digite a quantidade de ações: ")
+                                                                                       (set! valor (string->number(read-line)))
+                                                                                       (set! qntGoogle (+ qntGoogle valor))
+                                                                                       (set! carteira (- carteira (* valor (acoes-close (first lisGoogle)))))]
+                                              
+                                              [(string-locale=? "Microsoft" nome_empresa) (displayln "Digite a quantidade de ações: ")
+                                                                                          (set! valor (string->number(read-line)))
+                                                                                          (set! qntMicro (+ qntMicro valor))
+                                                                                          (set! carteira (- carteira (* valor (acoes-close (first lisMicro)))))]
+                                              
+                                              [(string-locale=? "Petrobras" nome_empresa) (displayln "Digite a quantidade de ações: ")
+                                                                                          (set! valor (string->number(read-line)))
+                                                                                          (set! qntPetro (+ qntPetro valor))
+                                                                                          (set! carteira (- carteira (* valor (acoes-close (first lisPetro)))))]]]]
+
+                                 
                                  
                                  (displayln (string-append "\t\tGoogle\t\tMicrosoft\t\tPetrobras"))
-                                 (displayln (string-append "Minhas ações: \t" (number->string qntGoogle) "\t\t" (number->string qntMicro) "\t\t\t" (number->string qntPetro)))(menu-compras choose)]])
-
-                 (menu-compras choose)
-
-
-                 (displayln (string-append "\t\tGoogle\t\tMicrosoft\t\tPetrobras"))
-                 (displayln (string-append "Minhas ações: \t" (number->string qntGoogle) "\t\t" (number->string qntMicro) "\t\t\t" (number->string qntPetro)))
-                 
-                 (set! carteira (+ (* qntGoogle (- (acoes-close (first (rest lisGoogle))) (acoes-close (first lisGoogle))))
-                                   (* qntMicro (- (acoes-close (first (rest lisMicro))) (acoes-close (first lisMicro))))
-                                   (* qntPetro (- (acoes-close (first (rest lisPetro))) (acoes-close (first lisPetro))))))
-                 [cond
-                   [(>= carteira 0) (display "\nLucro: ")]
-                   [(< carteira 0) (display "\nPerda: ")]]
-
-                 (displayln (string-append (number->string carteira) "\n")) (dataSubsequente (proxDataValida dia Google))]
+                                 (displayln (string-append "Minhas ações: \t" (number->string qntGoogle) "\t\t" (number->string qntMicro) "\t\t\t" (number->string qntPetro)))
+                                                                                                    (menu-compras choose)]])(menu-compras choose)]
     
-    [(= opcao 2) (dataSubsequente (proxDataValida dia Google))]])
+
+    [(= opcao 2) (define (menu_venda choose)
+
+                   (displayln (string-append "\t\tGoogle\t\tMicrosoft\t\tPetrobras"))
+                   (displayln (string-append "Minhas ações: \t" (number->string qntGoogle) "\t\t" (number->string qntMicro) "\t\t\t" (number->string qntPetro)))
+                 
+                   (displayln "0. Sair")
+                   (displayln "1. Vender todas as ações")
+                   (displayln "2. Vender ações Google")
+                   (displayln "3. Vender ações Microsoft")
+                   (displayln "4. Vender ações Petrobras")
+                   (set! choose (string->number (read-line)))
+
+                   [cond
+                     [(= choose 0) (displayln "Retornando ao menu principal") (compra_e_venda dia lisGoogle lisMicro lisPetro qntGoogle qntMicro qntPetro carteira)]
+
+                     [(= choose 1) (set! carteira (+ carteira (* qntGoogle (acoes-close (first lisGoogle)))
+                                                              (* qntMicro (acoes-close (first lisMicro)))
+                                                              (* qntPetro (acoes-close (first lisPetro)))))
+                                   (set! qntGoogle 0)
+                                   (set! qntMicro 0)
+                                   (set! qntPetro 0)
+                                   
+                                   (menu_venda choose)]
+
+                     [(= choose 2) (printf "Você possui ~a ações da Google\n" qntGoogle)
+                                   (displayln "Digite a quantidade de ações que deseja vender: ")
+                                   (set! valor (string->number (read-line)))
+
+                                   (set! qntGoogle (- qntGoogle valor))
+                                   (set! carteira (+ carteira (* valor (acoes-close (first lisGoogle)))))
+                                   
+                                   (printf "~a ações da Google vendidas\n" valor)
+                                   (menu_venda choose)]
+                     
+                     [(= choose 3) (printf "Você possui ~a ações da Microsoft\n" qntMicro)
+                                   (displayln "Digite a quantidade de ações que deseja vender: ")
+                                   (set! valor (string->number (read-line)))
+
+                                   (set! qntMicro (- qntMicro valor))
+                                   (set! carteira (+ carteira (* valor (acoes-close (first lisMicro)))))
+                                   
+                                   (printf "~a ações da Microsoft vendidas\n" valor)
+                                   (menu_venda choose)]
+                     
+                     [(= choose 4) (printf "Você possui ~a ações da Petrobras\n" qntPetro)
+                                   (displayln "Digite a quantidade de ações que deseja vender: ")
+                                   (set! valor (string->number (read-line)))
+
+                                   (set! qntPetro (- qntPetro valor))
+                                   (set! carteira (+ carteira (* valor (acoes-close (first lisPetro)))))
+                                   
+                                   (printf "~a ações da Petrobras vendidas\n" valor)
+                                   (menu_venda choose)]]) (menu_venda choose)]
+
+    
+    [(= opcao 3) (dataSubsequente (proxDataValida dia Google) qntGoogle qntMicro qntPetro carteira)]])
 
 
 
